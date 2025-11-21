@@ -1,29 +1,28 @@
-from sentinel_ai_v2.data_intake import get_all_data
-from sentinel_ai_v2.feature_engineering import build_features
-from sentinel_ai_v2.threat_models import evaluate_threats
-from sentinel_ai_v2.risk_aggregation import aggregate_risk
-from sentinel_ai_v2.scoring import score_risk
+from __future__ import annotations
 
-def run_full_workflow():
-    """
-    Full Sentinel pipeline:
-    1. Data intake
-    2. Feature engineering
-    3. Threat evaluation
-    4. Risk aggregation
-    5. Scoring
-    """
-    
-    raw = get_all_data()
-    features = build_features(raw)
-    threats = evaluate_threats(features)
-    aggregated = aggregate_risk(threats)
-    score = score_risk(aggregated)
+from typing import Any, Dict, Optional
 
-    return {
-        "raw": raw,
-        "features": features,
-        "threats": threats,
-        "risk": aggregated,
-        "score": score
-    }
+from ..api import SentinelClient, SentinelResult
+from ..config import load_config
+
+
+def _get_client(client: Optional[SentinelClient] = None) -> SentinelClient:
+    """Return provided client or build a default one from config."""
+    if client is not None:
+        return client
+    cfg = load_config()
+    return SentinelClient(config=cfg)
+
+
+def run_full_workflow(
+    raw_telemetry: Dict[str, Any],
+    client: Optional[SentinelClient] = None,
+) -> SentinelResult:
+    """
+    High-level single-shot workflow.
+
+    ADN or node operators pass one telemetry snapshot (dict) and get back
+    a SentinelResult (status + risk_score + details).
+    """
+    sentinel = _get_client(client)
+    return sentinel.evaluate_snapshot(raw_telemetry)
