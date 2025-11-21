@@ -1,38 +1,42 @@
-import time
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from ..api import SentinelClient, SentinelResult
+from ..config import load_config
 from .workflow import run_full_workflow
 from .monitor import Monitor
 
+
 class SentinelWrapper:
     """
-    High-level orchestrator: wraps the entire Sentinel AI v2 engine.
-    Provides: start(), stop(), health(), run_once()
+    Thin convenience wrapper around SentinelClient + Monitor.
+
+    Usage example:
+
+        wrapper = SentinelWrapper()
+        result = wrapper.evaluate(snapshot)
+        status = wrapper.last_status()
     """
 
-    def __init__(self):
-        self.monitor = Monitor()
-        self.running = False
+    def __init__(self, client: Optional[SentinelClient] = None) -> None:
+        if client is None:
+            cfg = load_config()
+            client = SentinelClient(config=cfg)
 
-    def run_once(self):
-        """Executes a single run cycle."""
-        result = run_full_workflow()
-        self.monitor.update(result)
+        self._client = client
+        self._monitor = Monitor()
+
+    def evaluate(self, raw_telemetry: Dict[str, Any]) -> SentinelResult:
+        """
+        Evaluate one telemetry snapshot and update internal monitor.
+        """
+        result = run_full_workflow(raw_telemetry, client=self._client)
+        self._monitor.update(result)
         return result
 
-    def start(self, interval=10):
-        """Starts an automated loop."""
-        self.running = True
-        print("[SentinelWrapper] Starting loop...")
-
-        while self.running:
-            result = self.run_once()
-            print(f"[SentinelWrapper] Result: {result}")
-            time.sleep(interval)
-
-    def stop(self):
-        """Stops the automated loop."""
-        self.running = False
-        print("[SentinelWrapper] Stopped.")
-
-    def health(self):
-        """Returns last known health state."""
-        return self.monitor.last_status()
+    def last_status(self) -> Dict[str, Any]:
+        """
+        Get last known status summary (for dashboards / health checks).
+        """
+        return self._monitor.last_status()
