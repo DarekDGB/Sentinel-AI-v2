@@ -18,7 +18,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Single shared wrapper instance – keeps last result in Monitor
+# Single shared wrapper instance – stores the last result in Monitor
 wrapper = SentinelWrapper()
 
 
@@ -62,7 +62,7 @@ class HealthResponse(BaseModel):
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     """
-    Lightweight health check for load balancers / monitoring.
+    Lightweight health check for load balancers or monitoring systems.
     """
     last = wrapper.last_status()
     return HealthResponse(
@@ -74,14 +74,14 @@ async def health() -> HealthResponse:
 @app.post("/evaluate", response_model=EvaluateResponse)
 async def evaluate(req: EvaluateRequest) -> EvaluateResponse:
     """
-    Evaluate one telemetry snapshot and return risk assessment.
+    Evaluate one telemetry snapshot and return a full risk assessment.
 
-    This is what dashboards, bots and ADN nodes will typically call.
+    This is what dashboards, bots, and ADN nodes typically call.
     """
     try:
         result = wrapper.evaluate(req.telemetry)
-    except Exception as exc:  # noqa: BLE001 – simplified error handling for this reference implementation
-        # In production, developers can replace this with more robust logging / error handling.
+    except Exception as exc:  # noqa: BLE001 – simplified for reference implementation
+        # In production, developers may replace this with full logging and error handling.
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return EvaluateResponse(
@@ -94,12 +94,12 @@ async def evaluate(req: EvaluateRequest) -> EvaluateResponse:
 @app.get("/status", response_model=StatusResponse)
 async def status() -> StatusResponse:
     """
-    Return last known Sentinel status snapshot (from Monitor).
+    Return the last known Sentinel status snapshot from Monitor.
 
-    Useful for dashboards / widgets that only need:
-    - status
+    Useful for dashboards or widgets that only need:
+    - current status
     - last risk_score
-    - last details
+    - last threat details
     """
     last = wrapper.last_status()
     return StatusResponse(
@@ -107,4 +107,3 @@ async def status() -> StatusResponse:
         risk_score=float(last.get("risk_score", 0.0)),
         details=last.get("details", []),
     )
-Add FastAPI server for Sentinel AI v2
