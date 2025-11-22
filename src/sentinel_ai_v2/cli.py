@@ -90,7 +90,7 @@ def _cmd_snapshot(args: argparse.Namespace) -> int:
 
 
 def _cmd_version() -> int:
-    # Trzymamy wersję tutaj, żeby dev mógł to łatwo podmienić.
+    # Keep the version info here so developers can easily update it.
     version_info = {
         "sentinel_ai_v2": "0.1.0",
         "description": "Quantum-Resistant Threat Engine for DigiByte",
