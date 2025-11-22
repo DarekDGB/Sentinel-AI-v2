@@ -126,7 +126,72 @@ Cross-analyzes all DigiByte signals:
 - hashrate  
 
 ### 5.4 Circuit Breakers
-Hard-coded emergency rules:
 
-- entropy_drop + mempool_anomaly + reorg_depth →
-- 
+Hard-coded emergency rules take full priority over AI.
+
+Example:
+
+Circuit Breaker A – Full Kill Switch
+Triggered when all three are true:
+	•	entropy_drop >= threshold
+	•	mempool_anomaly >= threshold
+	•	reorg_depth >= threshold
+
+→ Immediate CRITICAL
+→ ADN activates hardened mode
+→ PQC signatures enforced
+→ Attack window neutralized
+
+Circuit Breaker B – Temporal / Geographic Anomalies
+Triggered by:
+	•	timestamp manipulation
+	•	multi-region synchronized anomalies
+	•	repeated sudden reorgs
+
+⸻
+
+6. Scoring Pipeline
+	1.	Correlation Engine
+	2.	Adversarial Engine
+	3.	Circuit Breakers (override everything)
+	4.	Final Score Mapping
+
+Score → Status Mapping
+	•	CRITICAL — any circuit breaker triggers
+	•	HIGH — score ≥ 0.8
+	•	ELEVATED — score ≥ 0.4
+	•	NORMAL — score < 0.4
+ Output:
+ SentinelScore(
+    status: str,
+    risk_score: float,
+    details: list[str]
+)
+7. Public API
+
+Using SentinelClient:
+result = client.evaluate_snapshot(raw_telemetry)
+Returns:
+SentinelResult(
+    status="NORMAL|ELEVATED|HIGH|CRITICAL",
+    risk_score=float,
+    details=list[str]
+)
+8. Security & Licensing
+	•	Model weights not included → safe under MIT
+	•	No external ML runtime dependencies
+	•	No consensus modifications
+	•	No interaction with private keys
+	•	Legal risk nearly zero
+
+⸻
+
+9. Future Extensions
+
+Sentinel AI v2 is designed with a long-term roadmap:
+	•	graph neural network inference
+	•	large-scale temporal anomaly networks
+	•	swarm-based multi-node correlation
+	•	PQC anomaly classifiers
+	•	on-chain encrypted telemetry channels
+	•	wallet-signal behavioural analytics
