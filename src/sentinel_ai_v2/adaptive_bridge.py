@@ -64,3 +64,32 @@ def emit_adaptive_event(event: AdaptiveEvent) -> None:
         logger.debug("AdaptiveEvent %s", json.dumps(payload, sort_keys=True))
     except Exception as e:  # pragma: no cover – defensive
         logger.error("Failed to log AdaptiveEvent: %s", e)
+
+ def emit_adaptive_event_from_signal(
+    signal_name: str,
+    severity: float,
+    qri_delta: float = 0.0,
+    layer: str = "sentinel",
+    context: dict | None = None,
+) -> None:
+    """
+    Convenience helper: take any Sentinel signal name and push it
+    into the Adaptive Core.
+
+    This keeps the calling code very small:
+
+        emit_adaptive_event_from_signal(
+            signal_name="entropy_drop",
+            severity=0.82,
+            qri_delta=-0.15,
+            context={"window": "30s", "chain": "DigiByte"},
+        )
+    """
+    evt = build_adaptive_event(
+        layer=layer,
+        anomaly_type=signal_name,
+        severity=severity,
+        qri_delta=qri_delta,
+        context=context or {},
+    )
+    export_to_adaptive_core(evt)
