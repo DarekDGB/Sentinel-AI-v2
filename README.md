@@ -11,17 +11,15 @@ designed to *observe* DigiByte node behaviour and surface useful risk
 signals.
 
 Its purpose is to help node operators and developers gain deeper
-visibility into:
-
--   node health\
--   mempool behaviour\
--   chain stability\
--   reorg patterns\
--   oracle / price-feed deviations\
--   anomaly trends over time
+visibility into: - node health\
+- mempool behaviour\
+- chain stability\
+- reorg patterns\
+- oracle / price-feed deviations\
+- anomaly trends over time
 
 All cryptographic upgrades and consensus decisions remain the
-responsibility of the DigiByte Core (C++).\
+responsibility of DigiByte Core (C++).\
 Sentinel AI v2 only **reads, analyses, and reports**.
 
 ------------------------------------------------------------------------
@@ -41,12 +39,12 @@ flowchart LR
 
 ## 3. Key Modules
 
--   `telemetry_monitor.py` -- collects RPC data\
--   `anomaly_engine.py` -- detects unusual chain or mempool behaviour\
--   `adaptive_core_bridge.py` -- *optional* integration with Adaptive
-    Layer for research\
--   `heartbeat.py` -- generates basic health metadata\
--   `log_utils.py` -- structured logging for dashboards
+-   `telemetry_monitor.py` --- collects RPC data\
+-   `anomaly_engine.py` --- detects unusual chain or mempool behaviour\
+-   `adaptive_core_bridge.py` --- *optional* integration with Adaptive
+    Layer\
+-   `heartbeat.py` --- generates basic health metadata\
+-   `log_utils.py` --- structured logging for dashboards
 
 ------------------------------------------------------------------------
 
@@ -72,6 +70,32 @@ This tool is **read-only** and focused entirely on visibility.
 
 ------------------------------------------------------------------------
 
+## ⚠️ Limitations (Added for clarity & alignment with DigiByte Core)
+
+This clarifies boundaries and addresses DigiByte Core feedback.
+
+### ✔ Sentinel AI v2 CAN:
+
+-   detect stalled chain conditions\
+-   detect abnormal mempool spikes\
+-   detect reorg-like behaviour\
+-   log early warnings\
+-   feed dashboards and analytics\
+-   assist node operators in diagnostics
+
+### ❌ Sentinel AI v2 CANNOT:
+
+-   prevent consensus-level attacks\
+-   protect private keys from quantum threats\
+-   stop ECDSA-level cryptographic compromise\
+-   enforce behaviour on other nodes\
+-   modify validation logic
+
+All protocol-level protection happens inside **DigiByte Core (C++)**,
+not here.
+
+------------------------------------------------------------------------
+
 ## 5. Example Anomaly Signal API
 
 ``` python
@@ -86,8 +110,6 @@ report_reorg_anomaly(
 
 ## 6. Functional Monitoring Example
 
-A simple block-progress monitor:
-
 ``` python
 from sentinel_ai_v2.telemetry_monitor import check_block_progress
 
@@ -95,8 +117,7 @@ status = check_block_progress()
 print(status)
 ```
 
-If the chain appears stalled beyond a threshold, an anomaly flag is
-logged.
+Logs if the chain is stalled.
 
 ------------------------------------------------------------------------
 
@@ -107,17 +128,14 @@ from sentinel_ai_v2.heartbeat import shield_heartbeat
 print(shield_heartbeat())
 ```
 
-Outputs general diagnostic information (version, timestamps, last
-checks).
-
 ------------------------------------------------------------------------
 
 ## 8. Current Functional Coverage
 
--   [x] Basic telemetry structure\
--   [x] Heartbeat metadata output\
--   [x] Initial anomaly-signal API\
--   [ ] Block-progress anomaly detector\
+-   [x] Telemetry structure\
+-   [x] Heartbeat metadata\
+-   [x] Anomaly-signal API\
+-   [x] Block-progress anomaly detector\
 -   [ ] Mempool deviation detector\
 -   [ ] Chain-health metrics\
 -   [ ] Price-feed deviation checker
@@ -126,16 +144,16 @@ checks).
 
 ## 9. Safety Properties
 
--   External, non-intrusive architecture\
--   Read-only interaction with the node\
--   Optional integration with Adaptive Layer\
--   Modular, test-friendly design
+-   External, non-intrusive\
+-   Read-only\
+-   Optional Adaptive integration\
+-   Modular & test-friendly
 
 ------------------------------------------------------------------------
 
 ## 10. License
 
-MIT License -- free to use, modify, and distribute.
+MIT License --- free to use, modify, and distribute.
 
 ------------------------------------------------------------------------
 
