@@ -1,4 +1,4 @@
-import pytest
+from sentinel_ai_v2.v3 import SentinelV3
 
 
 def test_contract_v3_invalid_version_fails_closed():
@@ -12,7 +12,8 @@ def test_contract_v3_invalid_version_fails_closed():
         "contract_version": 2,  # invalid on purpose
     }
 
-    with pytest.raises(Exception):
-        # This will be replaced later with the real v3 entrypoint,
-        # but the invariant is enforced NOW.
-        raise NotImplementedError("v3 evaluator not implemented yet")
+    response = SentinelV3.evaluate(request)
+
+    assert response["decision"] == "ERROR"
+    assert response["meta"]["fail_closed"] is True
+    assert "SNTL_ERROR_SCHEMA_VERSION" in response["reason_codes"]
