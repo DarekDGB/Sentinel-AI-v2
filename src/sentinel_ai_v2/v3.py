@@ -1,117 +1,233 @@
 """
-Sentinel AI — Shield Contract v3 entrypoint (fail-closed only)
+Sentinel AI — Shield Contract v3 entrypoint
 
-Archangel Michael invariant:
-- contract_version must be exactly 3
-- invalid / unknown / missing input fails closed
-- no scoring / heuristics / ML in this phase
+Archangel Michael invariants enforced:
+- contract_version must be exactly 3 (fail-closed)
+- strict input validation (fail-closed)
+- single v3 entrypoint
+- NO caller-supplied shortcuts (no cached verdicts, no skip flags)
+- uses existing v2 scoring pipeline WITHOUT changing behavior
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import hashlib
 import json
+import time
+
+from .config import CircuitBreakerThresholds
+from .data_intake import TelemetrySnapshot, normalize_raw_telemetry
+from .model_loader import LoadedModel, run_model_inference
+from .scoring import SentinelScore, compute_risk_score
 
 
 @dataclass(frozen=True)
 class SentinelV3:
     """
-    Single supported v3 entrypoint.
+    Single supported v3 entrypoint (component-level gate).
 
-    NOTE: Phase 1 implementation is validation + fail-closed response only.
-    No intelligence, no heuristics, no ML, no v2 routing.
+    NOTE:
+    - This is NOT a network server.
+    - This is a pure evaluator (given telemetry + thresholds + optional model).
     """
+
+    thresholds: CircuitBreakerThresholds
+    model: Optional[LoadedModel] = None
 
     COMPONENT: str = "sentinel"
     CONTRACT_VERSION: int = 3
 
-    @staticmethod
-    def evaluate(request: Dict[str, Any]) -> Dict[str, Any]:
+    def evaluate(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Evaluate a Shield Contract v3 request.
+        Evaluate a Shield Contract v3 request and return a v3-shaped response.
 
-        Fail-closed rules:
-        - Any non-dict request -> ERROR (fail_closed=True)
-        - contract_version != 3 -> ERROR (fail_closed=True)
-        - missing telemetry -> ERROR (fail_closed=True)
+        Fail-closed:
+        - invalid version -> ERROR (fail_closed=True)
+        - missing/invalid telemetry -> ERROR (fail_closed=True)
 
-        Returns a v3-shaped response, but decision remains ERROR until later phases.
+        Behavior:
+        - Uses the existing v2 scoring pipeline (normalize -> features -> compute_risk_score)
+          so results match v2 behavior.
         """
+        start = time.time()
+
         # 1) Type guard
         if not isinstance(request, dict):
-            return SentinelV3._error_response(
+            return self._error_response(
                 request_id="unknown",
                 reason_code="SNTL_ERROR_INVALID_REQUEST",
                 details={"error": "request must be a dict"},
+                latency_ms=self._latency_ms(start),
             )
 
-        # 2) Pull request_id early (for traceability), but never trust it
-        request_id = request.get("request_id", "unknown")
+        request_id = str(request.get("request_id", "unknown"))
 
-        # 3) Strict version check (fail closed)
+        # 2) Strict version check
         contract_version = request.get("contract_version", None)
-        if contract_version != SentinelV3.CONTRACT_VERSION:
-            return SentinelV3._error_response(
-                request_id=str(request_id),
+        if contract_version != self.CONTRACT_VERSION:
+            return self._error_response(
+                request_id=request_id,
                 reason_code="SNTL_ERROR_SCHEMA_VERSION",
                 details={"error": "contract_version must be 3"},
+                latency_ms=self._latency_ms(start),
             )
 
-        # 4) Minimal required field: telemetry (can be empty dict, but must exist and be dict)
-        telemetry = request.get("telemetry", None)
-        if telemetry is None or not isinstance(telemetry, dict):
-            return SentinelV3._error_response(
-                request_id=str(request_id),
+        # 3) Telemetry must exist and be a dict
+        raw_telemetry = request.get("telemetry", None)
+        if raw_telemetry is None or not isinstance(raw_telemetry, dict):
+            return self._error_response(
+                request_id=request_id,
                 reason_code="SNTL_ERROR_INVALID_REQUEST",
                 details={"error": "telemetry must exist and be a dict"},
+                latency_ms=self._latency_ms(start),
             )
 
-        # 5) Deterministic context hash from canonical JSON (safe subset)
-        context_hash = SentinelV3._context_hash(
-            component=SentinelV3.COMPONENT,
-            contract_version=SentinelV3.CONTRACT_VERSION,
-            telemetry=telemetry,
-        )
+        # 4) Run the existing v2 pipeline (no behavior change)
+        snapshot: TelemetrySnapshot = normalize_raw_telemetry(raw_telemetry)
 
-        # 6) Phase 1: fail-closed placeholder response (no scoring yet)
-        return {
-            "contract_version": SentinelV3.CONTRACT_VERSION,
-            "component": SentinelV3.COMPONENT,
-            "request_id": str(request_id),
-            "context_hash": context_hash,
-            "decision": "ERROR",
-            "risk": {"score": 0.0, "tier": "LOW"},
-            "reason_codes": ["SNTL_ERROR_NOT_IMPLEMENTED"],
-            "evidence": {"features": {}, "details": {}},
-            "meta": {"model_used": False, "latency_ms": 0, "fail_closed": True},
+        features: Dict[str, Any] = {
+            "entropy_score": (snapshot.entropy or {}).get("score", 0.0),
+            "mempool_score": (snapshot.mempool or {}).get("score", 0.0),
+            "reorg_score": (snapshot.reorg or {}).get("score", 0.0),
+            "entropy_drop": (snapshot.entropy or {}).get("drop", 0.0),
+            "mempool_anomaly": (snapshot.mempool or {}).get("anomaly", 0.0),
+            "reorg_depth": (snapshot.reorg or {}).get("depth", 0),
         }
 
-    @staticmethod
-    def _context_hash(component: str, contract_version: int, telemetry: Dict[str, Any]) -> str:
-        """
-        Deterministic, canonical hashing for v3.
+        model_used = False
+        if self.model is not None:
+            # Keep v2 behavior: model contributes if available
+            model_score = run_model_inference(self.model, features)
+            features["model_score"] = model_score
+            model_used = True
 
-        WARNING: Do not include timestamps here unless they are normalized/clamped first.
-        """
+        sentinel_score: SentinelScore = compute_risk_score(
+            features=features,
+            thresholds=self.thresholds,
+        )
+
+        # 5) Build deterministic context hash
+        context_hash = self._context_hash(
+            component=self.COMPONENT,
+            contract_version=self.CONTRACT_VERSION,
+            telemetry=raw_telemetry,
+            # thresholds matter for determinism of decision; include a stable view
+            thresholds=self._thresholds_fingerprint(self.thresholds),
+            model_used=model_used,
+        )
+
+        # 6) Map to v3 response
+        # We keep v2 result fields inside evidence so v2 can map back exactly.
+        decision = self._map_status_to_decision(sentinel_score.status)
+
+        response = {
+            "contract_version": self.CONTRACT_VERSION,
+            "component": self.COMPONENT,
+            "request_id": request_id,
+            "context_hash": context_hash,
+            "decision": decision,
+            "risk": {
+                "score": float(sentinel_score.risk_score),
+                "tier": self._tier_from_score(float(sentinel_score.risk_score)),
+            },
+            # Keep reason codes stable and minimal in v3 for now
+            "reason_codes": self._reason_codes_from_details(sentinel_score.details),
+            "evidence": {
+                "features": {},  # keep empty for now (avoid leaking internals)
+                "details": {
+                    # v2 compatibility payload (internal bridging only)
+                    "v2_status": sentinel_score.status,
+                    "v2_risk_score": float(sentinel_score.risk_score),
+                    "v2_details": list(sentinel_score.details),
+                },
+            },
+            "meta": {
+                "model_used": bool(model_used),
+                "latency_ms": self._latency_ms(start),
+                "fail_closed": True,
+            },
+        }
+
+        return response
+
+    # ----------------------------
+    # Helpers (deterministic + safe)
+    # ----------------------------
+
+    @staticmethod
+    def _latency_ms(start: float) -> int:
+        return int((time.time() - start) * 1000)
+
+    @staticmethod
+    def _tier_from_score(score: float) -> str:
+        # Simple stable bucketing (can be refined later without breaking v2 mapping)
+        if score < 0.25:
+            return "LOW"
+        if score < 0.50:
+            return "MEDIUM"
+        if score < 0.75:
+            return "HIGH"
+        return "CRITICAL"
+
+    @staticmethod
+    def _map_status_to_decision(status: str) -> str:
+        s = (status or "").strip().upper()
+        if s in {"OK", "ALLOW", "SAFE", "GREEN"}:
+            return "ALLOW"
+        if s in {"WARN", "WARNING", "CAUTION", "YELLOW"}:
+            return "WARN"
+        if s in {"ERROR"}:
+            return "ERROR"
+        # Default: treat unknown as BLOCK (deny-by-default)
+        return "BLOCK"
+
+    @staticmethod
+    def _reason_codes_from_details(details: list[str]) -> list[str]:
+        # Stable, contract-facing codes only. Keep minimal to avoid churn.
+        if not details:
+            return ["SNTL_OK"]
+        # If v2 details exist, surface one stable umbrella code.
+        return ["SNTL_V2_SIGNAL"]
+
+    @staticmethod
+    def _thresholds_fingerprint(thresholds: CircuitBreakerThresholds) -> Dict[str, Any]:
+        # Best-effort stable representation for hashing.
+        # Avoid relying on dataclass internals; use vars() which is stable for dataclasses.
+        try:
+            return dict(vars(thresholds))
+        except Exception:
+            return {"_": "unavailable"}
+
+    @staticmethod
+    def _context_hash(
+        component: str,
+        contract_version: int,
+        telemetry: Dict[str, Any],
+        thresholds: Dict[str, Any],
+        model_used: bool,
+    ) -> str:
         payload = {
             "component": component,
             "contract_version": contract_version,
             "telemetry": telemetry,
+            "thresholds": thresholds,
+            "model_used": bool(model_used),
         }
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
-    @staticmethod
-    def _error_response(request_id: str, reason_code: str, details: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Fail-closed error response. Upstream must treat ERROR as BLOCK.
-        """
-        # Context hash for error paths: hash the minimal error envelope for determinism
+    def _error_response(
+        self,
+        request_id: str,
+        reason_code: str,
+        details: Dict[str, Any],
+        latency_ms: int,
+    ) -> Dict[str, Any]:
         payload = {
-            "component": SentinelV3.COMPONENT,
-            "contract_version": SentinelV3.CONTRACT_VERSION,
+            "component": self.COMPONENT,
+            "contract_version": self.CONTRACT_VERSION,
             "request_id": str(request_id),
             "reason_code": reason_code,
         }
@@ -119,13 +235,13 @@ class SentinelV3:
         context_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
         return {
-            "contract_version": SentinelV3.CONTRACT_VERSION,
-            "component": SentinelV3.COMPONENT,
+            "contract_version": self.CONTRACT_VERSION,
+            "component": self.COMPONENT,
             "request_id": str(request_id),
             "context_hash": context_hash,
             "decision": "ERROR",
             "risk": {"score": 0.0, "tier": "LOW"},
             "reason_codes": [reason_code],
             "evidence": {"features": {}, "details": details},
-            "meta": {"model_used": False, "latency_ms": 0, "fail_closed": True},
+            "meta": {"model_used": False, "latency_ms": int(latency_ms), "fail_closed": True},
         }
