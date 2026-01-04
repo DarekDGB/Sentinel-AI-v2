@@ -1,4 +1,4 @@
-# 🛡️ Sentinel AI v2  
+# 🛡️ Sentinel AI v3
 ### *DigiByte Quantum Shield — External Telemetry, Threat Modeling & Anomaly Detection Layer*  
 **Architecture by @DarekDGB — MIT Licensed**
 
@@ -6,12 +6,40 @@
 
 ## 🚀 Purpose
 
-**Sentinel AI v2** is the *external, non-consensus* security layer of the **DigiByte Quantum Shield**.  
-It observes, analyzes, correlates, and surfaces emergent threats to the DigiByte network using a
-multi-source telemetry model. Sentinel does **not** interfere with consensus — it informs higher layers.
+**Sentinel AI v3** is the *external, non-consensus* security monitoring layer of the **DigiByte Quantum Shield**.
 
-It is designed as a **whitepaper-level architecture reference**, ready for DigiByte Core developers and
-security researchers to extend and harden.
+It operates under **Shield Contract v3**, enforcing strict versioning, fail-closed semantics, and deterministic outputs.
+Sentinel observes, analyzes, correlates, and surfaces emergent threats to the DigiByte network, but **never interferes
+with consensus, signing, or execution**.
+
+Sentinel is designed as a **reference-grade security component**, suitable for integration into higher shield layers
+(DQSN, ADN, Adaptive Core) and for independent review by DigiByte Core developers and security researchers.
+
+---
+
+## 🛡️ Sentinel AI — Shield Contract v3
+
+Sentinel AI is now a **fully hardened Shield Contract v3 component**.
+
+### Core guarantees
+
+- **Contract v3 enforced**
+  - `contract_version == 3` is the outermost gate
+  - Invalid or unknown inputs fail closed
+- **Read-only**
+  - No signing, no execution, no state mutation
+- **Deterministic**
+  - Same input → same output → same `context_hash`
+- **Fail-closed**
+  - Unknown schema, NaN/Infinity values, oversized telemetry → `ERROR`
+- **Single authority**
+  - All evaluation flows through the v3 contract gate
+
+Sentinel AI **does not**:
+- alter consensus
+- modify blockchain state
+- hold keys
+- replace DigiByte Core or node software
 
 ---
 
@@ -31,19 +59,19 @@ security researchers to extend and harden.
                         ▲
                         │
         ┌────────────────────────────────────────┐
-        │        ADN v2 — Active Defence         │
+        │        ADN v3 — Active Defence         │
         │  Network Response, Isolation, Tactics  │
         └────────────────────────────────────────┘
                         ▲
                         │
         ┌────────────────────────────────────────┐
-        │      Sentinel AI v2 (THIS REPO)        │
+        │      Sentinel AI v3 (THIS REPO)        │
         │  Telemetry, Threat Intel, AI Scoring   │
         └────────────────────────────────────────┘
                         ▲
                         │
         ┌────────────────────────────────────────┐
-        │  DQSN v2 — DigiByte Quantum Shield Net │
+        │  DQSN v3 — DigiByte Quantum Shield Net │
         │  Entropy, Node Health, UTXO Patterns   │
         └────────────────────────────────────────┘
 ```
@@ -58,7 +86,7 @@ Sentinel is the **eyes and ears** of the Quantum Shield.
 Collect distributed measurements about the network: blocks, peers, latencies, forks, propagation.
 
 ### ✓ Identify  
-Detect patterns correlated with attacks:  
+Detect patterns correlated with attacks:
 - chain reorg attempts  
 - eclipse attacks  
 - sudden miner dominance  
@@ -68,7 +96,7 @@ Detect patterns correlated with attacks:
 - suspicious geographic clustering  
 
 ### ✓ Signal  
-Emit **risk scores** and **structured signals** to ADN v2 and QWG.
+Emit **risk scores** and **structured signals** to DQSN v3 and ADN v3.
 
 ### ✓ Never interfere with consensus  
 Sentinel is **external**. Zero consensus impact.
@@ -81,51 +109,34 @@ Sentinel evaluates threats across five planes:
 
 1. **Entropy Plane** — randomness quality, difficulty adjustments, timestamp divergence  
 2. **Topology Plane** — peer distribution, clustering, asynchrony  
-3. **Hashrate Plane** — dominance, sudden power shifts, orphan spikes  
+3. **Hashrate Plane** — dominance, sudden power shifts  
 4. **Fork Plane** — fork depth, competitive chain behavior  
 5. **Propagation Plane** — latency, bottlenecks, geographic imbalance  
 
-Each plane forms part of a **multi-factor risk vector**.
+Each plane contributes to a **multi-factor risk vector**.
 
 ---
 
-# 🧩 Internal Architecture
+# 🧩 Internal Architecture (Reference)
 
 ```
 sentinel_ai_v2/
 │
 ├── collectors/
-│     ├── block_collector.py
-│     ├── peer_collector.py
-│     ├── propagation_collector.py
-│     └── entropy_collector.py
-│
 ├── analytics/
-│     ├── reorg_detector.py
-│     ├── timestamp_analyzer.py
-│     ├── miner_behavior.py
-│     ├── anomaly_engine.py
-│     └── score_fusion.py
-│
 ├── outputs/
-│     ├── risk_feed.py
-│     ├── alert_bus.py
-│     └── adn_signal_router.py
-│
 └── utils/
-      ├── validators.py
-      ├── config.py
-      └── logging.py
 ```
 
-This is a *reference structure*: DigiByte developers extend the logic safely.
+This repository provides a **reference architecture**.  
+Concrete implementations may extend modules, but **contract rules and read-only guarantees must remain intact**.
 
 ---
 
 # 📡 Data Flow Overview
 
 ```
-[Attacker → Network Activity] 
+[Attacker → Network Activity]
           ↓
    (Collectors)
           ↓
@@ -135,9 +146,9 @@ This is a *reference structure*: DigiByte developers extend the logic safely.
           ↓
    [Threat Scores + Vectors]
           ↓
-   (Signal Router)
+   (Shield Contract v3 Gate)
           ↓
- [ADN v2 / QWG / Guardian Wallet]
+ [DQSN v3 / ADN v3 / Adaptive Core]
 ```
 
 ---
@@ -155,77 +166,43 @@ Sentinel follows six principles:
 3. **Multi‑Source Validation**  
    No single metric determines a threat.
 
-4. **Hard Fail-Safe**  
-   If uncertain → downgrade risk, not upgrade.
+4. **Fail‑Closed by Design**  
+   Invalid input results in `ERROR`, never silent acceptance.
 
-5. **Immutable Audit Trail**  
-   Reproducible detection paths.
+5. **Deterministic & Auditable**  
+   Outputs are reproducible and hash-addressable.
 
-6. **Integration with Higher Layers**  
-   Sentinel sends signals; ADN responds.
-
----
-
-# 📈 Example Threat Analytics
-
-### **Reorg Detection**
-- Competing chain growth  
-- Block timestamp deviations  
-- Missing expected difficulty patterns  
-- Sudden orphan spikes  
-
-### **Hashrate Dominance**
-- Single pool > 51%  
-- New miner with anomalous behavior  
-
-### **Propagation Attacks**
-- Regional latency spikes  
-- Eclipse attempts  
-- Partition anomalies  
-
----
-
-# 🔗 Interaction with Other Shield Layers
-
-### **With DQSN v2**  
-Consumes low-level entropy, node health, block structure metrics.
-
-### **With ADN v2**  
-Provides risk signals that trigger:
-- node isolation recommendations  
-- propagation warnings  
-- defensive mode transitions  
-
-### **With Guardian Wallet / QWG**  
-Can warn user-side systems about:
-- ongoing attacks  
-- suspicious chain conditions  
+6. **Signal, Not Authority**  
+   Sentinel informs; higher layers decide.
 
 ---
 
 # ⚙️ Code Status
 
-Sentinel AI v2 includes:
+Sentinel AI v3 includes:
 
-- Reference Python implementation  
-- Deterministic analytics stubs  
-- Ready-to-extend module architecture  
-- GitHub Actions test pipeline  
-- Smoke tests ensuring structure integrity
+- Shield Contract v3 enforcement
+- Deterministic evaluation pipeline
+- Fail-closed validation and hardening
+- v2 → v3 compatibility adapter
+- Regression locks preventing behavior drift
+- CI pipeline with security-focused tests
 
-This repo is **architecturally complete** and awaits community expansion.
+This repository is **v3-complete and integration-ready**.
 
 ---
 
 # 🧪 Tests
 
-The test suite includes:
+The test suite enforces:
 
-- Structural smoke tests  
-- Block progress monitor tests  
-- Expandable framework for threat simulations  
+- Contract version gating
+- Fail-closed behavior
+- NaN / Infinity rejection
+- Unknown schema rejection
+- v2 ↔ v3 no-drift regression lock
 
-Passing CI ensures repository integrity.
+Passing CI is a **security requirement**, not a formality.
 
 ---
 
@@ -233,18 +210,16 @@ Passing CI ensures repository integrity.
 
 Please see `CONTRIBUTING.md`.
 
-In summary:
-- Improvements = welcome  
-- Removals of architecture = rejected  
-- Sentinel must *always* remain an **external, non-consensus monitoring layer**
+Key rules:
+- Improvements are welcome
+- Contract weakening is rejected
+- Sentinel must always remain **external, read-only, and non-consensus**
 
 ---
 
 # 📜 License
 
 MIT License  
-© 2025 **DarekDGB**
+© 2026 **DarekDGB**
 
 This architecture is free to use with mandatory attribution.
-
----
