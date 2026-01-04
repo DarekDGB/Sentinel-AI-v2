@@ -1,72 +1,140 @@
-# Contributing to Sentinel AI v2
+# Contributing to Sentinel AI (Shield Contract v3)
 
-Sentinel AI v2 is a **reference architecture** and implementation skeleton for
-DigiByte’s external telemetry and anomaly-detection layer.
-
-It is part of the broader **DigiByte Quantum Shield & Adamantine** ecosystem and
-is designed to stay:
-
-- External to consensus  
-- Transparent  
-- Auditable  
-- Focused on **monitoring, scoring, and signalling**, not on forcing protocol changes.
-
----
-
-## What kind of contributions are welcome?
-
-✅ **Improvements and extensions**, for example:
-
-- Better feature engineering or risk scoring logic  
-- Additional telemetry sources (peers, latency, geography, etc.)  
-- Performance / reliability improvements in watchers and monitors  
-- Extra tests, attack simulations, and documentation  
-- Integrations with other DigiByte tools (nodes, dashboards, alerting stacks)
-
-✅ **Bug fixes**, refactors, or clarity improvements that keep the design intact.
+> **Shield Contract v3 Notice**
+>
+> Sentinel AI is now a **Shield Contract v3 signal-generation component**.
+> Contributions must not weaken:
+> - contract strictness
+> - determinism
+> - fail-closed behavior
+> - Sentinel’s read-only, non-consensus role
+>
+> Authoritative specifications live in **`docs/INDEX.md`**.
 
 ---
 
-## What is **not** accepted?
+## 🚀 Project Scope (v3)
 
-❌ Changes that **remove or weaken** core architectural ideas, such as:
+**Sentinel AI** is the *external, non-consensus* threat detection and signal-generation
+layer of the **DigiByte Quantum Shield**.
 
-- Removing Sentinel’s role as an external telemetry / monitoring layer  
-- Downgrading or deleting detection logic  
-- Turning Sentinel into a consensus-modifying component  
-- Replacing the DigiByte-focused model with something unrelated
+Its responsibilities are strictly limited to:
 
-If a change **dismantles the architecture** instead of improving it, it will be rejected.
+- observing network telemetry
+- detecting anomalous or hostile patterns
+- producing **structured Shield Contract v3 signals**
+- remaining fully **read-only**
 
----
+Sentinel AI **must never**:
+- sign transactions
+- modify blockchain state
+- influence consensus rules
+- act as an enforcement or policy engine
 
-## Design Principles
-
-Contributions should respect the following principles:
-
-- **No consensus changes** – Sentinel observes, it does not rule.  
-- **Security first** – favour correctness and safety over micro-optimisations.  
-- **Auditability** – keep logic understandable and reviewable.  
-- **Modularity** – new functionality should be in clear, focused modules.  
+Legacy v2 concepts are preserved in `docs/legacy/` for historical reference only.
 
 ---
 
-## Code Review Expectations
+## ✅ What Contributions Are Welcome
 
-The original author (@DarekDGB) acts as the **architect** of the system.
+### ✔️ Detection & Analysis Improvements
+- Improved anomaly detection logic
+- Better feature engineering (entropy, topology, propagation, forks)
+- Refinements to risk scoring models
+- Performance and reliability improvements
 
-- Contributors and DigiByte developers are expected to review **technical details**.  
-- Architectural review focuses on **direction and alignment with the shield vision**, not line-by-line code checking.
+### ✔️ Contract & Security Hardening
+- Strengthening Shield Contract v3 validation
+- Improving fail-closed handling
+- Tightening determinism and replay safety
+- Additional regression or invariance tests
 
-By opening a pull request, you confirm that:
+### ✔️ Testing & Verification
+- Attack simulations
+- Property-based or fuzz testing
+- CI hardening
+- No-drift regression coverage
 
-- Tests pass locally (where applicable).  
-- You have not removed or weakened core architecture.  
-- Your change is documented where appropriate (README/docs).
+### ✔️ Documentation
+- Clarifying v3 behavior or invariants
+- Improving explanations in authoritative docs
+- Correcting ambiguity or drift
 
 ---
 
-## License
+## ❌ What Will Not Be Accepted
 
-By contributing, you agree that your contributions are licensed under the
-same MIT License as the rest of the project.
+### 🚫 Weakening Shield Contract v3
+- Making validation permissive
+- Allowing partial or best-effort parsing
+- Softening fail-closed behavior
+- Introducing silent fallbacks
+
+### 🚫 Decision or Enforcement Logic
+Sentinel AI must not:
+- override upstream or downstream decisions
+- act as a policy engine
+- downgrade or reinterpret signals after evaluation
+
+### 🚫 Consensus Interaction
+Sentinel AI must never:
+- modify DigiByte consensus rules
+- influence block acceptance or difficulty
+- interact with private keys or signing flows
+
+### 🚫 Opaque or Unreviewable Complexity
+Avoid introducing:
+- opaque ML pipelines without explainability
+- heavy frameworks that reduce auditability
+- logic that obscures determinism or reproducibility
+
+---
+
+## 🧱 Design Principles (Non-Negotiable)
+
+All contributions must respect:
+
+1. **Read-Only by Design**  
+   Sentinel observes and signals — nothing more.
+
+2. **Fail-Closed First**  
+   Invalid input must result in `ERROR`, never silent acceptance.
+
+3. **Determinism**  
+   Same input → same output → same `context_hash`.
+
+4. **Auditability**  
+   Security reviewers must be able to reason about behavior from code alone.
+
+5. **Separation of Authority**  
+   Sentinel signals; DQSN transports; ADN decides.
+
+6. **History Preservation**  
+   Legacy concepts may be referenced, not re-introduced.
+
+---
+
+## 🔄 Pull Request Expectations
+
+A pull request should include:
+
+- A clear explanation of **what changed and why**
+- Tests for any contract, detection, or logic changes
+- No weakening of v3 invariants
+- Documentation updates where applicable
+
+Additional rules:
+- Contract changes **require tests**
+- Determinism changes require **regression coverage**
+- Fail-closed behavior must be preserved or strengthened
+
+The architect (**@DarekDGB**) reviews **direction and invariants**.  
+Contributors and DigiByte developers review **technical correctness**.
+
+---
+
+## 📝 License
+
+By contributing, you agree that your work is released under the **MIT License**.
+
+© 2026 **DarekDGB**
