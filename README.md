@@ -1,7 +1,8 @@
 # 🛡️ Sentinel AI v3
 ### *DigiByte Quantum Shield — External Telemetry, Threat Modeling & Anomaly Detection Layer*  
 **Architecture by @DarekDGB — MIT Licensed**
-
+> **Note:** This repository was originally named `Sentinel-AI-v2`.  
+> It now implements **Shield Contract v3**. The repository name will be aligned in a future cleanup pass.
 ---
 
 ## 🚀 Purpose
