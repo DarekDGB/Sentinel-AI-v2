@@ -1,6 +1,9 @@
 Sentinel AI v2 – Whitepaper
 Quantum-Resistant Threat Engine for the DigiByte Ecosystem
 
+> **Legacy note:** This document reflects Sentinel AI v2-era concepts and is preserved for history.
+> Current authoritative specifications are `docs/CONTRACT.md` and `docs/ARCHITECTURE.md`.
+
 Author: Darek (@Darek_DGB)
 Engineering: Angel (AI Assistant)
 Version: 2.0
