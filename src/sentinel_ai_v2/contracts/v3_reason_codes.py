@@ -1,1 +1,16 @@
-todo
+from __future__ import annotations
+
+from enum import Enum
+
+
+class ReasonCode(str, Enum):
+    # Success / informational
+    SNTL_OK = "SNTL_OK"
+    SNTL_V2_SIGNAL = "SNTL_V2_SIGNAL"
+
+    # Fail-closed errors
+    SNTL_ERROR_INVALID_REQUEST = "SNTL_ERROR_INVALID_REQUEST"
+    SNTL_ERROR_SCHEMA_VERSION = "SNTL_ERROR_SCHEMA_VERSION"
+    SNTL_ERROR_UNKNOWN_TOP_LEVEL_KEY = "SNTL_ERROR_UNKNOWN_TOP_LEVEL_KEY"
+    SNTL_ERROR_TELEMETRY_TOO_LARGE = "SNTL_ERROR_TELEMETRY_TOO_LARGE"
+    SNTL_ERROR_BAD_NUMBER = "SNTL_ERROR_BAD_NUMBER"
