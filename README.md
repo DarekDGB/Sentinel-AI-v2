@@ -1,24 +1,21 @@
 # 🛡️ Sentinel AI (Shield Contract v3)
-### *DigiByte Quantum Shield — External Telemetry, Threat Modeling & Anomaly Detection Layer*  
+### *DigiByte Quantum Shield — External Telemetry Analysis & Threat Signal Generation Layer*  
 **Architecture by @DarekDGB — MIT Licensed**
-
-> **Repository note**  
-> This repository was originally named `Sentinel-AI-v2`.  
-> It now implements **Shield Contract v3**.  
-> A repository rename (removing version suffixes) will occur in a future cleanup pass.
 
 ---
 
 ## 🚀 Purpose
 
-**Sentinel AI** is the *external, non-consensus* security monitoring layer of the **DigiByte Quantum Shield**.
+**Sentinel AI** is the *external, non-consensus* **telemetry analysis and threat-signal generation** component of the **DigiByte Quantum Shield**.
 
 It operates under **Shield Contract v3**, enforcing strict versioning, deterministic evaluation, and fail-closed
-semantics. Sentinel observes, analyzes, correlates, and surfaces emergent threats to the DigiByte network, but
-**never interferes with consensus, signing, or execution**.
+semantics. Sentinel **analyzes telemetry inputs**, evaluates threat patterns, and emits **structured, deterministic
+security signals**, but **never interferes with consensus, signing, execution, or wallet behavior**.
 
-Sentinel is designed as a **reference-grade security component**, suitable for integration into higher shield layers
-(DQSN, ADN, Adaptive Core) and for independent review by DigiByte Core developers and security engineers.
+Sentinel is designed as a **reference-grade security component**, suitable for:
+- upstream telemetry producers (nodes, monitors, collectors)
+- downstream consumers (DQSN v3, ADN v3, Adaptive Core)
+- independent review by DigiByte Core developers and security engineers
 
 ---
 
@@ -40,7 +37,7 @@ Legacy v2 documents are preserved under `docs/legacy/` for historical reference 
 
 ## 🛡️ Sentinel AI — Shield Contract v3
 
-Sentinel AI is a **fully hardened Shield Contract v3 component**.
+Sentinel AI is a **Shield Contract v3–compliant component**.
 
 ### Core guarantees
 
@@ -48,40 +45,52 @@ Sentinel AI is a **fully hardened Shield Contract v3 component**.
   - `contract_version == 3` is the outermost gate
   - Invalid, unknown, or malformed input fails closed
 - **Read-only**
-  - No signing, no execution, no state mutation
+  - No signing
+  - No execution
+  - No state mutation
 - **Deterministic**
   - Same input → same output → same `context_hash`
 - **Fail-closed**
-  - NaN/Infinity values, unknown schema, or invalid versions → `ERROR`
+  - NaN / Infinity values
+  - Unknown schemas
+  - Invalid versions → `ERROR`
 - **Single authority**
   - All evaluation flows through the v3 contract gate
 
 Sentinel AI does **not**:
 - alter consensus
 - modify blockchain state
-- hold keys
+- hold private keys
 - replace DigiByte Core or node software
 
 ---
 
 ## 🔥 Position in the DigiByte Quantum Shield (5-Layer Model)
 
+> **Important:** Sentinel does **analysis**, not transport and not enforcement.
+
 ```
         ┌────────────────────────────────────────┐
-        │           Guardian Wallet             │
-        │  User-side rules & policy enforcement │
+        │           Guardian Wallet              │
+        │  User-side rules & policy enforcement  │
         └────────────────────────────────────────┘
                         ▲
                         │
         ┌────────────────────────────────────────┐
         │        Quantum Wallet Guard (QWG)      │
-        │  PQC checks, signature safety, filters │
+        │  Signature safety & cryptographic gate │
         └────────────────────────────────────────┘
                         ▲
                         │
         ┌────────────────────────────────────────┐
-        │        ADN v3 — Active Defence         │
-        │  Network response & tactical controls │
+        │        ADN v3 — Decision Layer         │
+        │  Policy evaluation & defensive intent │
+        └────────────────────────────────────────┘
+                        ▲
+                        │
+        ┌────────────────────────────────────────┐
+        │        DQSN v3 — Signal Network        │
+        │  Aggregation, transport, normalization│
         └────────────────────────────────────────┘
                         ▲
                         │
@@ -89,83 +98,81 @@ Sentinel AI does **not**:
         │        Sentinel AI (THIS REPO)         │
         │  Telemetry analysis & threat scoring  │
         └────────────────────────────────────────┘
-                        ▲
-                        │
-        ┌────────────────────────────────────────┐
-        │        DQSN v3 — Telemetry Layer       │
-        │  Entropy, node health, chain signals  │
-        └────────────────────────────────────────┘
 ```
 
-Sentinel AI is the **eyes and ears** of the Quantum Shield.
+Sentinel AI is the **analytical engine** of the Quantum Shield —  
+it **produces signals**, it does **not** route or enforce them.
 
 ---
 
 ## 🎯 Core Mission
 
-### ✓ Observe  
-Collect distributed measurements about the network: blocks, peers, latencies, forks, propagation.
+### ✓ Analyze  
+Process structured telemetry inputs originating from nodes, monitors, or collectors.
 
 ### ✓ Identify  
-Detect patterns correlated with attacks:
+Detect patterns correlated with network-level threats, including:
 - chain reorg attempts  
-- eclipse attacks  
-- sudden miner dominance  
+- eclipse or isolation patterns  
+- sudden miner dominance shifts  
 - timestamp manipulation  
 - hashpower anomalies  
-- low-entropy block sequences  
-- suspicious geographic clustering  
+- entropy degradation  
+- suspicious geographic or topological clustering  
 
-### ✓ Signal  
-Emit **risk scores** and **structured signals** to DQSN v3 and ADN v3.
+### ✓ Emit signals  
+Produce **deterministic threat scores and structured signals** suitable for:
+- aggregation by DQSN v3
+- evaluation by ADN v3
+- consumption by Adaptive Core logic
 
 ### ✓ Never interfere with consensus  
-Sentinel is **external**. Zero consensus impact.
+Sentinel is **external** and **advisory only**.
 
 ---
 
 ## 🧠 Threat Model
 
-Sentinel evaluates threats across five planes:
+Sentinel evaluates threats across multiple analytical planes:
 
-1. **Entropy Plane** — randomness quality, difficulty adjustments, timestamp divergence  
-2. **Topology Plane** — peer distribution, clustering, asynchrony  
-3. **Hashrate Plane** — dominance, sudden power shifts  
-4. **Fork Plane** — fork depth, competitive chain behavior  
-5. **Propagation Plane** — latency, bottlenecks, geographic imbalance  
+1. **Entropy Plane** — randomness quality, difficulty behavior, timestamp variance  
+2. **Topology Plane** — peer distribution, clustering, network asymmetry  
+3. **Hashrate Plane** — dominance detection, sudden power shifts  
+4. **Fork Plane** — competing chains, fork depth, persistence  
+5. **Propagation Plane** — latency patterns, bottlenecks, imbalance  
 
-Each plane contributes to a **multi-factor risk vector**.
+Each plane contributes to a **multi-factor, explainable risk vector**.
+
+No single metric produces authority.
 
 ---
 
 ## 📡 Data Flow Overview
 
 ```
-[Network Activity]
+[Telemetry Sources]
         ↓
-[Collectors]
+[Structured Inputs]
         ↓
-[Raw Telemetry]
+[Sentinel Analysis Engines]
         ↓
-[Analytics Engines]
-        ↓
-[Threat Scores]
+[Deterministic Threat Scores]
         ↓
 [Shield Contract v3 Gate]
         ↓
-[DQSN v3 / ADN v3 / Adaptive Core]
+[DQSN v3 → ADN v3 → Adaptive Core]
 ```
 
 ---
 
 ## 🛡️ Security Philosophy
 
-1. **Zero Consensus Influence** — observes, never rules  
+1. **Zero Consensus Influence** — observe and analyze only  
 2. **Explainable Detection** — no black-box authority  
-3. **Multi-source Validation** — no single metric decides  
+3. **Multi-signal Evaluation** — no single metric decides  
 4. **Fail-Closed by Design** — invalid input → `ERROR`  
 5. **Deterministic & Auditable** — reproducible outputs  
-6. **Signal, Not Authority** — higher layers decide
+6. **Signal, Not Authority** — decisions belong upstream
 
 ---
 
@@ -175,12 +182,14 @@ Sentinel AI implements:
 
 - Shield Contract v3 enforcement
 - Deterministic evaluation pipeline
-- Fail-closed validation
+- Fail-closed validation logic
 - v2 → v3 compatibility adapter
-- Regression locks preventing behavior drift
-- CI pipeline with security-focused tests
+- Regression locks preventing behavioral drift
+- Security-focused test suite
 
-This repository is **v3-complete and integration-ready**.
+> CI workflows exist and are evolving; **test correctness is enforced by code and tests**, not by badges.
+
+This repository is **v3-aligned and integration-ready**.
 
 ---
 
@@ -192,9 +201,9 @@ The test suite enforces:
 - Fail-closed behavior
 - NaN / Infinity rejection
 - Unknown schema rejection
-- v2 ↔ v3 no-drift regression lock
+- v2 ↔ v3 no-drift guarantees
 
-Passing CI is a **security requirement**, not a formality.
+Tests are **security artifacts**, not optional checks.
 
 ---
 
@@ -213,5 +222,3 @@ Key rules:
 
 MIT License  
 © 2026 **DarekDGB**
-
-This architecture is free to use with mandatory attribution.
