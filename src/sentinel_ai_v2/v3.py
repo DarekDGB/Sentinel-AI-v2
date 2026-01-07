@@ -9,7 +9,7 @@ from .data_intake import TelemetrySnapshot, normalize_raw_telemetry
 from .model_loader import LoadedModel, run_model_inference
 from .scoring import SentinelScore, compute_risk_score
 
-from .contracts import ReasonCode, SentinelV3Request, canonical_sha256
+from .contracts import ReasonCode, SentinelV3Request, canonical_hash_v3
 
 
 @dataclass(frozen=True)
@@ -85,9 +85,12 @@ class SentinelV3:
             features["model_score"] = run_model_inference(self.model, features)
             model_used = True
 
-        sentinel_score: SentinelScore = compute_risk_score(features=features, thresholds=self.thresholds)
+        sentinel_score: SentinelScore = compute_risk_score(
+            features=features,
+            thresholds=self.thresholds,
+        )
 
-        context_hash = canonical_sha256(
+        context_hash = canonical_hash_v3(
             {
                 "component": self.COMPONENT,
                 "contract_version": self.CONTRACT_VERSION,
@@ -171,7 +174,7 @@ class SentinelV3:
         details: Dict[str, Any],
         latency_ms: int,
     ) -> Dict[str, Any]:
-        context_hash = canonical_sha256(
+        context_hash = canonical_hash_v3(
             {
                 "component": self.COMPONENT,
                 "contract_version": self.CONTRACT_VERSION,
