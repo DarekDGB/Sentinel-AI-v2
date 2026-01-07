@@ -1,16 +1,34 @@
-import importlib
+from sentinel_ai_v2.wrapper import workflow
 
 
-def test_wrapper_workflow_module_imports_and_has_public_api():
-    m = importlib.import_module("sentinel_ai_v2.wrapper.workflow")
+class _DummyClient:
+    def __init__(self):
+        self.seen = None
 
-    # Module should import cleanly (coverage will count executed lines).
-    assert m is not None
+    def evaluate_snapshot(self, raw_telemetry):
+        self.seen = raw_telemetry
+        # Return a SentinelResult-like object (duck typing)
+        class _R:
+            status = "OK"
+            risk_score = 0.12
+            details = ["x"]
 
-    # Basic sanity: module should expose at least one public callable.
-    public_callables = [
-        name
-        for name in dir(m)
-        if not name.startswith("_") and callable(getattr(m, name))
-    ]
-    assert public_callables, "workflow module exposes no public callables"
+        return _R()
+
+
+def test__get_client_returns_provided_client():
+    dummy = _DummyClient()
+    got = workflow._get_client(dummy)  # type: ignore[arg-type]
+    assert got is dummy
+
+
+def test_run_full_workflow_uses_provided_client_and_passes_telemetry():
+    dummy = _DummyClient()
+    tel = {"block_height": 123, "mempool_size": 7}
+
+    res = workflow.run_full_workflow(tel, client=dummy)  # type: ignore[arg-type]
+
+    assert dummy.seen == tel
+    assert res.status == "OK"
+    assert res.risk_score == 0.12
+    assert res.details == ["x"]
