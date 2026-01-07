@@ -31,13 +31,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
 
-      - name: Install project (editable)
+      - name: Install project (editable) + dev dependencies
         run: |
-          pip install -e .
-
-      - name: Install test dependencies
-        run: |
-          pip install pytest
+          pip install -e ".[dev]"
 
       - name: Syntax check (compileall)
         run: |
