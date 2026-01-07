@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional 
+from typing import Optional
 
 
 @dataclass
@@ -26,4 +26,5 @@ class AdaptiveEvent:
     was_mitigated: bool = False
     details: Optional[str] = None
 
-    created_at: datetime = datetime.utcnow()
+    # IMPORTANT: default_factory ensures a fresh timestamp per event (not import-time).
+    created_at: datetime = field(default_factory=datetime.utcnow)
