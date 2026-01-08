@@ -55,7 +55,7 @@ Sentinel does not attempt to:
 
 ## 4. Determinism Guarantees
 
-For any valid request:
+For any request (valid or invalid):
 
 - Output is deterministic
 - Output schema is stable
@@ -68,16 +68,23 @@ This guarantees:
 
 ---
 
-## 5. Context Hashing & Canonicalization
+## 5. Context Hashing & Canonicalization (Normative)
 
-Sentinel AI computes `context_hash` as a **deterministic SHA-256 hash** of the
-canonical JSON representation of the request context.
+Sentinel AI computes `context_hash` as a **deterministic SHA-256 hash** of a
+**canonical JSON payload defined by this contract**.
 
-Canonicalization rules:
-- JSON keys are sorted
-- Numeric values are validated and finite
+The hashed payload is **not** the raw request alone.  
+It is a **contract-defined context object** whose contents depend on execution outcome.
+
+### 5.1 Canonicalization Rules
+
+Canonicalization applies to all hashed payloads:
+
+- JSON keys are sorted lexicographically
 - UTF-8 encoding is used
+- Floating-point values must be finite (no NaN / ±Inf)
 - No locale-dependent behavior exists
+- Serialization uses compact JSON (no whitespace)
 
 ### Unicode Normalization Rule (Important)
 
@@ -85,19 +92,97 @@ Sentinel AI **does not apply Unicode normalization** (e.g. NFC / NFD).
 
 This means:
 - Visually identical strings with different Unicode codepoint sequences  
-  (e.g. precomposed vs decomposed characters) **will produce different hashes**
+  **produce different hashes**
 - Hashing is deterministic over **raw Unicode codepoints as provided**
 
-**Callers are responsible** for applying Unicode normalization *before*
-submitting requests if canonical equivalence is required.
+**Callers are responsible** for Unicode normalization *before submission*
+if canonical equivalence is required.
 
 This behavior is intentional and contract-stable.
 
 ---
 
+### 5.2 Hashed Context — SUCCESS / WARN / BLOCK
+
+When evaluation completes without a fatal error, `context_hash` is computed
+from the canonical JSON object containing **only contract-stable fields**:
+
+```json
+{
+  "contract_version": 3,
+  "component": "sentinel",
+  "request_id": "<string>",
+  "telemetry": { ... },
+  "constraints": { ... },
+  "decision": "<ALLOW|WARN|BLOCK>",
+  "risk": {
+    "score": <float>,
+    "tier": "<LOW|MEDIUM|HIGH|CRITICAL>"
+  },
+  "reason_codes": [ "<code>", ... ]
+}
+```
+
+Rules:
+- All listed fields **must** influence the hash
+- Any semantic change in these fields **must change the hash**
+- No additional fields are required by the contract
+
+#### Internal Hash Inputs (Non-Contractual)
+
+Sentinel AI **may include internal, stable fingerprints** (e.g. model or
+threshold identifiers) in the hash computation **provided**:
+
+- They are deterministic
+- They do not expose internal state
+- Their presence is not required for contract compliance
+
+Consumers **must not** assume knowledge of or rely on such internal inputs.
+
+---
+
+### 5.3 Hashed Context — ERROR (Fail-Closed)
+
+If request validation or evaluation fails, Sentinel AI **still produces a hash**.
+
+In this case, `context_hash` is computed from the canonical JSON object:
+
+```json
+{
+  "contract_version": 3,
+  "component": "sentinel",
+  "request_id": "<string>",
+  "decision": "ERROR",
+  "reason_codes": [ "<error_code>" ]
+}
+```
+
+Rules:
+- Raw telemetry is **not included**
+- Internal exception messages are **never included**
+- Reason codes are the **only semantic error signal**
+- Same invalid input + same validation failure → same hash
+
+---
+
+### 5.4 Explicit Exclusions (Hard Rules)
+
+The following **must never influence `context_hash`**:
+
+- Stack traces
+- Exception strings
+- Timestamps
+- Memory addresses
+- Random values
+- Non-contract diagnostic logs
+
+Violation of this rule breaks determinism and is a contract breach.
+
+---
+
 ## 6. Output Schema (v3)
 
-Sentinel AI returns a versioned, deterministic response:
+Sentinel AI returns a deterministic, versioned response containing:
 
 | Field | Description |
 |-----|-------------|
@@ -106,11 +191,12 @@ Sentinel AI returns a versioned, deterministic response:
 | `request_id` | Echoed from request |
 | `context_hash` | Deterministic SHA-256 hash |
 | `decision` | `ALLOW`, `WARN`, `BLOCK`, or `ERROR` |
-| `risk.score` | Float risk score |
-| `risk.tier` | LOW / MEDIUM / HIGH / CRITICAL |
+| `risk` | Risk object (`score`, `tier`) when applicable |
 | `reason_codes` | Stable contract-facing codes |
-| `evidence` | Diagnostic payload |
+| `evidence` | Optional diagnostic payload |
 | `meta.fail_closed` | Always `true` |
+
+Only fields listed above are contract-stable.
 
 ---
 
