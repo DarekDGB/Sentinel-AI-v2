@@ -1,13 +1,16 @@
 """
-Sentinel AI v2 – Quantum-Resistant Threat Engine for DigiByte.
+Sentinel AI — Shield Contract v3
 
-This package provides a reference implementation skeleton for the adversarial-
-hardened detection layer in the 3-layer DigiByte defense architecture:
+This module implements the Sentinel AI external analysis layer
+for the DigiByte Quantum Shield (v3).
 
-    DQSN → Sentinel AI v2 → ADN
+Note:
+- The package path remains `sentinel_ai_v2` for backward compatibility.
+- The contract, behavior, and guarantees implemented here are v3.
 """
 
-from .api import SentinelClient  # re-export for convenience
+__version__ = "3.0.0"
 
-__all__ = ["SentinelClient"]
-__version__ = "2.0.0"
+__all__ = [
+    "__version__",
+]
