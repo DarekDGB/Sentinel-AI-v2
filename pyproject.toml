@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dgb-sentinel-ai"
-version = "0.0.0"
+version = "3.0.0"
 description = "Sentinel AI — external telemetry analysis layer enforcing Shield Contract v3."
 readme = "README.md"
 license = { text = "MIT" }
@@ -14,15 +14,11 @@ authors = [{ name = "DarekDGB" }]
 # Runtime deps (imported by the package)
 dependencies = [
   "requests>=2.31",
-]
-
-[project.optional-dependencies]
-# Optional API server extras (only needed if using src/sentinel_ai_v2/server.py)
-api = [
   "fastapi>=0.110",
   "pydantic>=2.0",
 ]
 
+[project.optional-dependencies]
 # Developer / CI extras
 dev = [
   "pytest>=8",
