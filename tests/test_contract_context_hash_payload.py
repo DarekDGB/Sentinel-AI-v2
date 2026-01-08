@@ -3,6 +3,7 @@ import pytest
 from sentinel_ai_v2.v3 import SentinelV3
 from sentinel_ai_v2.config import CircuitBreakerThresholds
 from sentinel_ai_v2.contracts import ReasonCode, canonical_hash_v3
+from tests.fixtures_v3 import make_valid_v3_request
 
 
 def test_context_hash_success_matches_contract_payload():
@@ -12,19 +13,17 @@ def test_context_hash_success_matches_contract_payload():
     """
     s = SentinelV3(thresholds=CircuitBreakerThresholds())
 
-    req = {
-        "contract_version": 3,
-        "component": "sentinel",
-        "request_id": "r1",
-        "telemetry": {"block_height": 10, "mempool_size": 1},
-        "constraints": {},
-        "fail_closed": True,
-    }
+    # Use the repo's known-valid v3 request fixture (top-level allowlist compliant).
+    req = make_valid_v3_request(
+        request_id="r1",
+        telemetry={"block_height": 10, "mempool_size": 1, "entropy": {"score": 0.1}},
+        max_latency_ms=2500,
+    )
 
     out = s.evaluate(req)
     assert out["contract_version"] == 3
     assert out["component"] == "sentinel"
-    assert out["decision"] in {"ALLOW", "WARN", "BLOCK"}  # should not be ERROR here
+    assert out["decision"] in {"ALLOW", "WARN", "BLOCK"}  # must not be ERROR for valid input
     assert isinstance(out["context_hash"], str)
     assert len(out["context_hash"]) == 64  # sha256 hex
 
@@ -72,13 +71,7 @@ def test_context_hash_error_bad_version_matches_contract_payload():
     """
     s = SentinelV3(thresholds=CircuitBreakerThresholds())
 
-    req = {
-        "contract_version": 2,  # wrong
-        "component": "sentinel",
-        "request_id": "r-badver",
-        "telemetry": {"block_height": 1},
-        "fail_closed": True,
-    }
+    req = make_valid_v3_request(request_id="r-badver", contract_version=2)
 
     out = s.evaluate(req)
     assert out["decision"] == "ERROR"
