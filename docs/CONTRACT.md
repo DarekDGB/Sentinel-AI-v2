@@ -71,20 +71,21 @@ This guarantees:
 ## 5. Context Hashing & Canonicalization (Normative)
 
 Sentinel AI computes `context_hash` as a **deterministic SHA-256 hash** of a
-**canonical JSON payload defined by this contract**.
+**canonical JSON payload**.
 
-The hashed payload is **not** the raw request alone.  
-It is a **contract-defined context object** whose contents depend on execution outcome.
+Important: The hashed payload is **explicitly defined** below.
+Consumers must **not** guess which fields are included.
 
 ### 5.1 Canonicalization Rules
 
 Canonicalization applies to all hashed payloads:
 
 - JSON keys are sorted lexicographically
+- Serialization uses compact JSON (no whitespace)
 - UTF-8 encoding is used
+- `ensure_ascii=false` is used (Unicode preserved deterministically)
 - Floating-point values must be finite (no NaN / ±Inf)
 - No locale-dependent behavior exists
-- Serialization uses compact JSON (no whitespace)
 
 ### Unicode Normalization Rule (Important)
 
@@ -105,39 +106,30 @@ This behavior is intentional and contract-stable.
 ### 5.2 Hashed Context — SUCCESS / WARN / BLOCK
 
 When evaluation completes without a fatal error, `context_hash` is computed
-from the canonical JSON object containing **only contract-stable fields**:
+from the canonical JSON object containing:
 
 ```json
 {
-  "contract_version": 3,
   "component": "sentinel",
-  "request_id": "<string>",
+  "contract_version": 3,
   "telemetry": { ... },
-  "constraints": { ... },
-  "decision": "<ALLOW|WARN|BLOCK>",
-  "risk": {
-    "score": <float>,
-    "tier": "<LOW|MEDIUM|HIGH|CRITICAL>"
-  },
-  "reason_codes": [ "<code>", ... ]
+  "thresholds": "<stable thresholds fingerprint>",
+  "model_used": true
 }
 ```
 
 Rules:
 - All listed fields **must** influence the hash
-- Any semantic change in these fields **must change the hash**
-- No additional fields are required by the contract
+- Any semantic change in telemetry, thresholds fingerprint, or model_used
+  **must change the hash**
+- The following fields are **not guaranteed to be included** in the hashed payload:
+  - `request_id`
+  - `constraints`
+  - `decision`
+  - `reason_codes`
+  - `evidence`
 
-#### Internal Hash Inputs (Non-Contractual)
-
-Sentinel AI **may include internal, stable fingerprints** (e.g. model or
-threshold identifiers) in the hash computation **provided**:
-
-- They are deterministic
-- They do not expose internal state
-- Their presence is not required for contract compliance
-
-Consumers **must not** assume knowledge of or rely on such internal inputs.
+Consumers must not assume those fields are hash inputs.
 
 ---
 
@@ -149,18 +141,17 @@ In this case, `context_hash` is computed from the canonical JSON object:
 
 ```json
 {
-  "contract_version": 3,
   "component": "sentinel",
+  "contract_version": 3,
   "request_id": "<string>",
-  "decision": "ERROR",
-  "reason_codes": [ "<error_code>" ]
+  "reason_code": "<error_code>"
 }
 ```
 
 Rules:
 - Raw telemetry is **not included**
 - Internal exception messages are **never included**
-- Reason codes are the **only semantic error signal**
+- `reason_code` is the **only semantic error signal** used for hashing
 - Same invalid input + same validation failure → same hash
 
 ---
@@ -191,12 +182,10 @@ Sentinel AI returns a deterministic, versioned response containing:
 | `request_id` | Echoed from request |
 | `context_hash` | Deterministic SHA-256 hash |
 | `decision` | `ALLOW`, `WARN`, `BLOCK`, or `ERROR` |
-| `risk` | Risk object (`score`, `tier`) when applicable |
+| `risk` | Risk object (`score`, `tier`) |
 | `reason_codes` | Stable contract-facing codes |
-| `evidence` | Optional diagnostic payload |
+| `evidence` | Diagnostic payload |
 | `meta.fail_closed` | Always `true` |
-
-Only fields listed above are contract-stable.
 
 ---
 
